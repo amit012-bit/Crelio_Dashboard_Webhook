@@ -1,0 +1,61 @@
+# .cursor file
+# This prompt guides Cursor to generate a full-stack project using MERN + Next.js.
+# It enforces clean modular code, comments, and adaptability.
+
+instructions: |
+  Build a top-level **full-stack website** using **MERN stack + Next.js** with the following requirements:
+
+  1. **Folder Structure**
+     - `frontend/` → Next.js app with pages, components, styles, and utils.
+     - `backend/` → Node.js + Express API with routes, controllers, models, config, and middleware.
+     - Shared environment variables in `.env`.
+     - `docker-compose.yml` for running frontend, backend, and MongoDB.
+     - `README.md` with setup and run instructions.
+
+  2. **Frontend (Next.js + React + TailwindCSS)**
+     - Proper module separation:
+       - `components/` for reusable UI.
+       - `pages/` with routing (home, about, contact, dashboard).
+       - `lib/` for API helpers.
+       - `styles/` with Tailwind and global styles.
+     - Include **great animations** using **Framer Motion**.
+     - Follow best practices: responsive UI, accessibility, modular imports, reusable hooks.
+     - Example: navbar, footer, animated hero section, cards with hover animations.
+
+  3. **Backend (Node.js + Express + MongoDB via Mongoose)**
+     - `server.js` entrypoint.
+     - `routes/` for REST endpoints.
+     - `controllers/` for business logic.
+     - `models/` with Mongoose schemas.
+     - `middleware/` for auth, error handling, validation.
+     - `config/` for DB connection and environment management.
+     - Use JWT authentication and bcrypt for hashing.
+     - Implement sample routes: `/api/users`, `/api/posts`.
+
+  4. **Best Practices**
+     - Write **clear comments** for each function and module.
+     - Use `.env` for secrets (DB_URI, JWT_SECRET, API keys).
+     - Implement ESLint + Prettier for consistent formatting.
+     - Ensure code is modular, readable, and easy to extend.
+     - Provide error handling for all async operations.
+     - Backend should support CORS for frontend calls.
+
+  5. **Future Adaptability**
+     - Configurable services in `config/` so it’s easy to swap DB, add APIs, or integrate third-party services.
+     - Use dependency injection patterns where possible.
+     - Keep separation of concerns strict (controllers shouldn’t handle DB queries directly).
+
+  6. **Extras**
+     - Add `package.json` scripts for dev, build, lint, and test in both frontend and backend.
+     - Use TypeScript in frontend for type safety.
+     - Add sample test setup with Jest (backend) and React Testing Library (frontend).
+     - Provide sample API integration in frontend (fetch posts, fetch user profile).
+
+expected_output: |
+  A complete full-stack MERN + Next.js scaffold with:
+  - Proper folder/file structure for frontend and backend.
+  - Clear comments and readable code.
+  - Animated frontend UI with Framer Motion.
+  - Backend API with modular controllers and MongoDB models.
+  - Config-driven setup, ready for future extension.
+  - All code written with best practices for clarity and maintainability.
