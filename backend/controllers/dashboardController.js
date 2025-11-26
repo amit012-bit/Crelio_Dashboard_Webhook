@@ -130,12 +130,28 @@ export const getTodayPatients = asyncHandler(async (req, res) => {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
-  const patients = await Patient.find({
-    registrationDate: { $gte: today, $lt: tomorrow },
+  // Find patients registered today OR created today (fallback for webhook patients)
+  let patients = await Patient.find({
+    $or: [
+      { registrationDate: { $gte: today, $lt: tomorrow } },
+      { createdAt: { $gte: today, $lt: tomorrow } }, // Fallback to createdAt if registrationDate is missing
+    ],
   })
     .populate("assignedDoctor", "name specialty")
-    .sort({ registrationDate: -1 })
+    .sort({ registrationDate: -1, createdAt: -1 }) // Sort by registrationDate first, then createdAt
     .limit(50); // Limit to 50 most recent
+  
+  console.log(`📊 Found ${patients.length} patients for today`);
+  
+  // If no patients found for today, return the most recent patients instead
+  if (patients.length === 0) {
+    // console.log("📋 No patients for today, fetching most recent patients instead...");
+    patients = await Patient.find()
+      .populate("assignedDoctor", "name specialty")
+      .sort({ registrationDate: -1, createdAt: -1 }) // Sort by most recent first
+      .limit(50); // Limit to 50 most recent
+    // console.log(`📊 Found ${patients.length} recent patients to display`);
+  }
   
   res.json({
     success: true,

@@ -21,7 +21,8 @@ interface SuccessStatsProps {
 export default function SuccessStats({ data }: SuccessStatsProps) {
   return (
     <motion.div
-      className="bg-white rounded-lg shadow-sm p-6"
+      className="bg-white rounded-2xl p-6"
+      style={{ boxShadow: '0px 4px 12px rgba(0,0,0,0.08)' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -55,9 +56,9 @@ export default function SuccessStats({ data }: SuccessStatsProps) {
                   {item.successRate}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <motion.div
-                  className="bg-teal-500 h-2 rounded-full"
+                  className="bg-teal-500 h-2.5 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${item.successRate}%` }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}

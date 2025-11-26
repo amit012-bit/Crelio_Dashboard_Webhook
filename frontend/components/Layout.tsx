@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
+import Footer from './Footer'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -21,7 +22,7 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen" style={{ backgroundColor: '#F6F7FB' }}>
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
@@ -31,9 +32,12 @@ export default function Layout({ children }: LayoutProps) {
         <Navbar />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-white">
+        <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#F6F7FB' }}>
           {children}
         </main>
+
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   )

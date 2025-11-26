@@ -18,5 +18,14 @@ const router = express.Router();
  */
 router.post("/crelio", handleWebhook);
 
+/**
+ * POST /crelio/webhook
+ * 
+ * Alternative endpoint matching the original Node.js-Webhook-on-Render format
+ * Receives webhook data and saves to database
+ * Requires X-Webhook-Token header for authentication
+ */
+router.post("/crelio/webhook", handleWebhook);
+
 export default router;
 

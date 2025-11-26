@@ -70,10 +70,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   return (
     <motion.aside
       className={`bg-white text-gray-800 transition-all duration-300 border-r border-gray-200 ${
-        isOpen ? 'w-64' : 'w-20'
+        isOpen ? 'w-52' : 'w-20'
       }`}
       initial={false}
-      animate={{ width: isOpen ? 256 : 80 }}
+      animate={{ width: isOpen ? 208 : 80 }}
     >
       <div className="py-4">
         {/* Logo/Header - hidden when collapsed */}

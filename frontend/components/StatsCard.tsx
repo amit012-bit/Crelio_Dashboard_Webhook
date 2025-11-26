@@ -18,7 +18,7 @@ interface StatsCardProps {
   title: string
   value: number | string
   subtitle?: string
-  color: 'blue' | 'red' | 'orange' | 'green' | 'purple' | 'teal'
+  color: 'blue' | 'red' | 'orange' | 'green' | 'purple' | 'teal' | 'pink'
   icon: string | ReactNode
   large?: boolean
   small?: boolean
@@ -68,6 +68,13 @@ const colorClasses = {
     text: 'text-teal-600',
     textWhite: 'text-white',
   },
+  pink: {
+    bg: 'bg-pink-500',
+    bgDark: 'bg-pink-600',
+    light: 'bg-pink-50',
+    text: 'text-pink-600',
+    textWhite: 'text-white',
+  },
 }
 
 export default function StatsCard({
@@ -91,8 +98,9 @@ export default function StatsCard({
 
     return (
       <motion.div
-        className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-        whileHover={{ scale: 1.01 }}
+        className="bg-white rounded-2xl p-6 transition-shadow"
+        style={{ boxShadow: '0px 4px 12px rgba(0,0,0,0.08)' }}
+        whileHover={{ boxShadow: '0px 6px 16px rgba(0,0,0,0.12)' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -130,22 +138,23 @@ export default function StatsCard({
   if (small) {
     return (
       <motion.div
-        className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
-        whileHover={{ scale: 1.01 }}
+        className="bg-white rounded-2xl p-3 transition-shadow"
+        style={{ boxShadow: '0px 4px 12px rgba(0,0,0,0.08)' }}
+        whileHover={{ boxShadow: '0px 6px 16px rgba(0,0,0,0.12)' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className={`text-xs font-medium ${colors.text} mb-1`}>{title}</p>
-            <h3 className="text-lg font-bold text-gray-800">{value}</h3>
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-medium ${colors.text} mb-1 truncate`}>{title}</p>
+            <h3 className="text-base font-bold text-gray-800">{value}</h3>
           </div>
-          <div className={`${colors.bg} rounded-full p-1.5`}>
+          <div className={`${colors.bg} rounded-full p-1.5 flex-shrink-0 ml-2`}>
             {typeof icon === 'string' ? (
-              <span className="text-base text-white">{icon}</span>
+              <span className="text-sm text-white">{icon}</span>
             ) : (
-              <div className="text-white text-sm">{icon}</div>
+              <div className="text-white text-xs">{icon}</div>
             )}
           </div>
         </div>
@@ -153,7 +162,7 @@ export default function StatsCard({
     )
   }
 
-  // Large cards have solid colored background (like Medicare dashboard)
+  // Large cards have solid colored background
   if (large) {
     return (
       <motion.div

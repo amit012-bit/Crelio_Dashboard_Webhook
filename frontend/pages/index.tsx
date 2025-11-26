@@ -51,13 +51,19 @@ export default function Dashboard() {
           getAllDoctors(),
         ])
 
-        // API functions return response.data, which is { success: true, data: {...} }
-        // So we need to access the nested 'data' property
+        // API functions return response.data from axios
+        // Stats API returns: { success: true, data: {...} }
+        // Patients API returns: { success: true, count: number, data: [...] }
+        // Other APIs return: { success: true, data: [...] }
         const statsData = (statsRes as any)?.data || statsRes
-        const patientsData = (patientsRes as any)?.data || (patientsRes as any) || []
-        const activityDataResult = (activityRes as any)?.data || (activityRes as any) || []
-        const successData = (successRes as any)?.data || (successRes as any) || []
-        const doctorsData = (doctorsRes as any)?.data || (doctorsRes as any) || []
+        // Extract patients array from response
+        const patientsData = (patientsRes as any)?.data || []
+        // Extract activity data array
+        const activityDataResult = (activityRes as any)?.data || []
+        // Extract success stats array
+        const successData = (successRes as any)?.data || []
+        // Extract doctors array
+        const doctorsData = (doctorsRes as any)?.data || []
         
         setStats(statsData)
         setTodayPatients(patientsData)
@@ -69,9 +75,14 @@ export default function Dashboard() {
         console.log('📊 Dashboard Data Loaded:', {
           stats: statsData,
           patients: patientsData,
+          patientsCount: patientsData?.length || 0,
           activity: activityDataResult,
           success: successData,
           doctors: doctorsData,
+        })
+        console.log('🔍 Raw API Responses:', {
+          patientsRes: patientsRes,
+          doctorsRes: doctorsRes,
         })
       } catch (error: any) {
         console.error('❌ Error fetching dashboard data:', error)
@@ -120,41 +131,45 @@ export default function Dashboard() {
   return (
     <Layout>
       <motion.div
-        className="p-4 space-y-4"
+        className="p-6 space-y-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         {/* Top Section: Welcome Banner */}
         <motion.div variants={itemVariants}>
-          {/* Welcome Banner - Ultra compact, minimal height */}
+          {/* Welcome Banner - Gradient teal to blue */}
           <motion.div
-            className="bg-gradient-to-r from-teal-500 via-teal-400 to-teal-300 rounded-lg px-3 text-white shadow-sm"
-            style={{ height: '60px', paddingTop: '8px', paddingBottom: '8px' }}
+            className="bg-gradient-to-r from-teal-500 to-blue-500 rounded-2xl px-8 py-6 text-white"
+            style={{ boxShadow: '0px 4px 12px rgba(0,0,0,0.08)' }}
           >
-            <div className="flex items-center justify-between h-full">
-              <div className="flex-1 pr-2">
-                <h1 className="text-2xl font-bold leading-tight">Hello Admin!</h1>
-                <p className="text-white text-opacity-95 text-[20px] leading-tight line-clamp-1 mt-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold mb-2">Hello Admin!</h1>
+                <p className="text-white text-opacity-95 text-base leading-relaxed">
                   Here are your important task, Updates and alerts. You can set your in app preferences here.
                 </p>
               </div>
-              <div className="hidden md:block flex-shrink-0">
-                {/* Illustration - healthcare professionals, minimal size */}
-                {/* <div className="w-5 h-5 flex items-center justify-center">
-                  <div className="flex space-x-0.5">
-                    <span className="text-lg">👨‍⚕️</span>
-                    <span className="text-lg">👩‍⚕️</span>
-                    <span className="text-lg">👨‍⚕️</span>
+              <div className="hidden md:block flex-shrink-0 ml-8">
+                {/* Medical professionals illustration */}
+                <div className="flex items-center space-x-2">
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">👨‍⚕️</span>
                   </div>
-                </div> */}
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">👩‍⚕️</span>
+                  </div>
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">👨‍⚕️</span>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
         </motion.div>
 
-        {/* All Stats Cards - 5 cards in one row, equal size, full width */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* All Stats Cards - 5 cards in single row */}
+        <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <StatsCard
             title="New Tasks"
             value={stats?.reports?.today || 0}

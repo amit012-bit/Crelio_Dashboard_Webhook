@@ -60,6 +60,10 @@ app.get("/health", (req, res) => {
 // Webhook routes (for receiving data from Node.js-Webhook-on-Render)
 app.use("/api/webhook", webhookRoutes);
 
+// Root-level webhook endpoint (matches original Node.js-Webhook-on-Render format)
+// POST /crelio/webhook - for compatibility with original webhook receiver
+app.use("/crelio", webhookRoutes);
+
 // Dashboard routes (for frontend data)
 app.use("/api/dashboard", dashboardRoutes);
 

@@ -86,6 +86,12 @@ const labSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    
+    // Additional metadata from webhook
+    webhookMetadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,
