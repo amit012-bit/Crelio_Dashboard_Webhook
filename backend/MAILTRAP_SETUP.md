@@ -39,9 +39,9 @@ Open `backend/.env` and add the email configuration:
 SMTP_HOST=sandbox.smtp.mailtrap.io
 SMTP_PORT=2525
 SMTP_SECURE=false
-EMAIL_USER=04b4c8f512a145
-EMAIL_PASSWORD=a44a0b4d5a5841
-RECIPIENT_EMAIL=sharktankindia1122@gmail.com
+EMAIL_USER=your-mailtrap-username
+EMAIL_PASSWORD=your-mailtrap-password
+RECIPIENT_EMAIL=your-email@gmail.com
 EMAIL_FROM=webhook@crelio-dashboard.local
 ```
 

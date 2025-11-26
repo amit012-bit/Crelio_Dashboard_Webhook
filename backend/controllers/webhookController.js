@@ -16,6 +16,7 @@ import Report from "../models/Report.js";
 import Doctor from "../models/Doctor.js";
 import Lab from "../models/Lab.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
+import { sendWebhookAlert } from "../services/emailService.js";
 import fs from "fs";
 import path from "path";
 
