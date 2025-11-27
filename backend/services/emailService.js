@@ -21,25 +21,52 @@ dotenv.config();
 // Email configuration from environment variables
 // Default: Mailtrap Sandbox (for testing - emails are captured, not sent)
 // For production: Use Gmail, Outlook, or other SMTP providers
-const EMAIL_CONFIG = {
-  // SMTP server host
-  // Mailtrap Sandbox: sandbox.smtp.mailtrap.io (for testing)
-  // Gmail: smtp.gmail.com, Outlook: smtp-mail.outlook.com
-  host: process.env.SMTP_HOST || "sandbox.smtp.mailtrap.io",
-  // SMTP port (Mailtrap: 2525, Gmail: 587, Outlook: 587)
-  port: parseInt(process.env.SMTP_PORT || "2525"),
-  // Use secure connection (true for 465, false for other ports)
-  secure: process.env.SMTP_SECURE === "true" || false,
-  // Authentication credentials
-  auth: {
-    // Mailtrap username (or email for other providers)
-    // Get your credentials from: https://mailtrap.io/inboxes
-    user: process.env.EMAIL_USER || "",
-    // Mailtrap password (or app password for other providers)
-    // Get your credentials from: https://mailtrap.io/inboxes
-    pass: process.env.EMAIL_PASSWORD || "",
-  },
+const getEmailConfig = () => {
+  const host = process.env.SMTP_HOST || "sandbox.smtp.mailtrap.io";
+  const port = parseInt(process.env.SMTP_PORT || "2525");
+  const secure = process.env.SMTP_SECURE === "true" || false;
+  const isGmail = host.includes("gmail.com");
+  
+  // Base configuration
+  const config = {
+    host: host,
+    port: port,
+    secure: secure, // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_USER || "",
+      pass: process.env.EMAIL_PASSWORD || "",
+    },
+    // Connection timeout (30 seconds)
+    connectionTimeout: 30000,
+    // Socket timeout (30 seconds)
+    socketTimeout: 30000,
+    // Greeting timeout (30 seconds)
+    greetingTimeout: 30000,
+  };
+
+  // Gmail-specific configuration
+  if (isGmail && port === 587) {
+    config.requireTLS = true;
+    config.tls = {
+      // Do not fail on invalid certificates
+      rejectUnauthorized: false,
+      // Use TLS 1.2 or higher
+      minVersion: 'TLSv1.2',
+    };
+  }
+
+  // For secure connections (port 465)
+  if (secure || port === 465) {
+    config.secure = true;
+    config.tls = {
+      rejectUnauthorized: false,
+    };
+  }
+
+  return config;
 };
+
+const EMAIL_CONFIG = getEmailConfig();
 
 // Recipient email address (where alerts will be sent)
 const RECIPIENT_EMAIL = process.env.RECIPIENT_EMAIL || "sharktankindia1122@gmail.com";
@@ -50,9 +77,9 @@ let transporter = null;
 
 /**
  * Initialize the email transporter
- * This sets up the connection to the SMTP server
+ * This sets up the connection to the SMTP server and verifies credentials
  */
-function initializeTransporter() {
+async function initializeTransporter() {
   // Check if credentials are provided
   if (!EMAIL_CONFIG.auth.user || !EMAIL_CONFIG.auth.pass) {
     console.warn("⚠️  Email credentials not configured!");
@@ -63,12 +90,8 @@ function initializeTransporter() {
 
   // Create transporter if not already created
   if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: EMAIL_CONFIG.host,
-      port: EMAIL_CONFIG.port,
-      secure: EMAIL_CONFIG.secure,
-      auth: EMAIL_CONFIG.auth,
-    });
+    // Create transporter with proper configuration
+    transporter = nodemailer.createTransport(EMAIL_CONFIG);
     
     // Log which SMTP server is being used
     if (EMAIL_CONFIG.host.includes("mailtrap")) {
@@ -76,6 +99,23 @@ function initializeTransporter() {
       console.log("📧 View emails at: https://mailtrap.io/inboxes");
     } else {
       console.log(`📧 Using SMTP: ${EMAIL_CONFIG.host}:${EMAIL_CONFIG.port}`);
+      // Debug: Show masked credentials (for troubleshooting)
+      const maskedUser = EMAIL_CONFIG.auth.user ? 
+        `${EMAIL_CONFIG.auth.user.substring(0, 3)}***@${EMAIL_CONFIG.auth.user.split('@')[1]}` : 
+        'not set';
+      const passLength = EMAIL_CONFIG.auth.pass ? EMAIL_CONFIG.auth.pass.length : 0;
+      console.log(`📧 Email User: ${maskedUser}`);
+      console.log(`📧 App Password: ${passLength > 0 ? '***' + EMAIL_CONFIG.auth.pass.substring(passLength - 4) : 'not set'} (${passLength} chars)`);
+      
+      // Verify connection (only once on initialization)
+      try {
+        await transporter.verify();
+        console.log("✅ SMTP connection verified successfully");
+      } catch (verifyError) {
+        console.error("❌ SMTP connection verification failed:", verifyError.message);
+        // Don't return null here - let it try to send and fail gracefully
+        // This allows the app to continue even if email is misconfigured
+      }
     }
   }
 
@@ -97,8 +137,8 @@ function initializeTransporter() {
  */
 export async function sendWebhookAlert(webhookData) {
   try {
-    // Initialize transporter
-    const emailTransporter = initializeTransporter();
+    // Initialize transporter (async - verifies connection)
+    const emailTransporter = await initializeTransporter();
     
     // If email is not configured, skip sending (don't throw error)
     if (!emailTransporter) {
@@ -227,22 +267,30 @@ Webhook processed and saved to database successfully.
     // Define email options
     // For Mailtrap: any email address works (emails are captured, not sent)
     // For production: use a real email address
-    const fromEmail = process.env.EMAIL_FROM || `webhook@crelio-dashboard.local`;
+    const fromEmail = process.env.EMAIL_FROM || EMAIL_CONFIG.auth.user || `webhook@crelio-dashboard.local`;
     
     const mailOptions = {
-      // Sender email (for Mailtrap, any address works)
+      // Sender email (use authenticated user's email for better deliverability)
       from: `"Crelio Dashboard Webhook" <${fromEmail}>`,
-      // Recipient email
+      // Recipient email (can be comma-separated for multiple recipients)
       to: RECIPIENT_EMAIL,
       // Email subject
       subject: subject,
-      // Plain text version
+      // Plain text version (for email clients that don't support HTML)
       text: textBody,
-      // HTML version
+      // HTML version (preferred)
       html: emailBody,
+      // Additional headers for better email deliverability
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high',
+      },
+      // Message ID (will be auto-generated if not provided)
+      // date: new Date(), // Auto-set by nodemailer
     };
 
-    // Send email
+    // Send email with proper error handling
     const info = await emailTransporter.sendMail(mailOptions);
 
     // Log success
@@ -258,6 +306,17 @@ Webhook processed and saved to database successfully.
   } catch (error) {
     // Log error but don't throw (don't break webhook processing if email fails)
     console.error("❌ Error sending email:", error.message);
+    
+    // Provide helpful troubleshooting for Gmail authentication errors
+    if (error.code === 'EAUTH' && EMAIL_CONFIG.host.includes('gmail.com')) {
+      console.error("🔧 Gmail Authentication Troubleshooting:");
+      console.error("   1. Verify 2-Step Verification is enabled on your Google account");
+      console.error("   2. Generate a new App Password at: https://myaccount.google.com/apppasswords");
+      console.error("   3. Use the 16-character app password (spaces are optional)");
+      console.error("   4. Make sure EMAIL_USER is your full Gmail address");
+      console.error("   5. The app password should be exactly as shown by Google");
+    }
+    
     console.error("Email error details:", error);
 
     // Return error result
