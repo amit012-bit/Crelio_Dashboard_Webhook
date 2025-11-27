@@ -18,7 +18,7 @@ import ActivityChart from '@/components/ActivityChart'
 import SuccessStats from '@/components/SuccessStats'
 import DoctorList from '@/components/DoctorList'
 import PatientTable from '@/components/PatientTable'
-import { getDashboardStats, getTodayPatients, getActivityData, getSuccessStats, getAllDoctors } from '@/lib/api'
+import { getDashboardStats, getTodayPatients, getAllPatients, getActivityData, getSuccessStats, getAllDoctors } from '@/lib/api'
 import { 
   HiClipboardList, 
   HiUsers, 
@@ -43,9 +43,10 @@ export default function Dashboard() {
         setLoading(true)
         
         // Fetch all data in parallel
+        // Use getAllPatients instead of getTodayPatients to show all recent patients
         const [statsRes, patientsRes, activityRes, successRes, doctorsRes] = await Promise.all([
           getDashboardStats(),
-          getTodayPatients(),
+          getAllPatients({ page: 1, limit: 50 }), // Get all recent patients (not just today's)
           getActivityData(6),
           getSuccessStats(),
           getAllDoctors(),
@@ -53,11 +54,11 @@ export default function Dashboard() {
 
         // API functions return response.data from axios
         // Stats API returns: { success: true, data: {...} }
-        // Patients API returns: { success: true, count: number, data: [...] }
+        // Patients API returns: { success: true, count: number, data: [...] } or { success: true, data: [...] }
         // Other APIs return: { success: true, data: [...] }
         const statsData = (statsRes as any)?.data || statsRes
-        // Extract patients array from response
-        const patientsData = (patientsRes as any)?.data || []
+        // Extract patients array from response (handle both getAllPatients and getTodayPatients format)
+        const patientsData = (patientsRes as any)?.data || (patientsRes as any)?.data?.data || []
         // Extract activity data array
         const activityDataResult = (activityRes as any)?.data || []
         // Extract success stats array

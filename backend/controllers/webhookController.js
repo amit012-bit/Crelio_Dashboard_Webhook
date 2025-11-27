@@ -561,6 +561,14 @@ const createOrUpdatePatient = async (fields, allFields, fullPayload) => {
     ? (typeof fields.patientId === 'string' ? fields.patientId : String(fields.patientId))
     : (fields.reportId ? `PAT-${fields.reportId}` : `PAT-${Date.now()}`);
   
+  // Check for duplicate patient based ONLY on patientId (from payload or generated)
+  let patient = null;
+  const patientIdStr = typeof patientId === 'string' ? patientId : String(patientId);
+  patient = await Patient.findOne({ patientId: patientIdStr });
+  if (patient) {
+    console.log(`🔍 Found existing patient by patientId: ${patientIdStr}`);
+  }
+  
   // Prepare patient data
   // Parse age to handle formats like "26 years" -> 26
   const parsedAge = parseAge(fields.patientAge);
@@ -602,31 +610,6 @@ const createOrUpdatePatient = async (fields, allFields, fullPayload) => {
       zipCode: fields.referralPincode || null,
       country: fields.countryCodeOfPatient || null,
     };
-  }
-  
-  // Try to find existing patient by reportId or billId (handle both string and number)
-  let patient = null;
-  if (fields.reportId) {
-    const reportIdStr = String(fields.reportId);
-    patient = await Patient.findOne({ 
-      $or: [
-        { reportId: reportIdStr },
-        { reportId: fields.reportId } // Also try as number
-      ]
-    });
-  }
-  if (!patient && fields.billId) {
-    const billIdStr = String(fields.billId);
-    patient = await Patient.findOne({ 
-      $or: [
-        { billId: billIdStr },
-        { billId: fields.billId } // Also try as number
-      ]
-    });
-  }
-  if (!patient && fields.patientId) {
-    const patientIdStr = typeof fields.patientId === 'string' ? fields.patientId : String(fields.patientId);
-    patient = await Patient.findOne({ patientId: patientIdStr });
   }
   
   if (patient) {
