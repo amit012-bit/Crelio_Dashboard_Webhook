@@ -28,6 +28,12 @@ const getEmailConfig = () => {
   const isGmail = host.includes("gmail.com");
   
   // Base configuration
+  // Increased timeouts for production environments (like Render) that may have network delays
+  const isProduction = process.env.NODE_ENV === 'production';
+  const connectionTimeout = isProduction ? 60000 : 30000; // 60s for production, 30s for dev
+  const socketTimeout = isProduction ? 60000 : 30000;
+  const greetingTimeout = isProduction ? 30000 : 30000;
+  
   const config = {
     host: host,
     port: port,
@@ -36,12 +42,16 @@ const getEmailConfig = () => {
       user: process.env.EMAIL_USER || "",
       pass: process.env.EMAIL_PASSWORD || "",
     },
-    // Connection timeout (30 seconds)
-    connectionTimeout: 30000,
-    // Socket timeout (30 seconds)
-    socketTimeout: 30000,
-    // Greeting timeout (30 seconds)
-    greetingTimeout: 30000,
+    // Connection timeout (increased for production)
+    connectionTimeout: connectionTimeout,
+    // Socket timeout (increased for production)
+    socketTimeout: socketTimeout,
+    // Greeting timeout
+    greetingTimeout: greetingTimeout,
+    // Additional options for better reliability
+    pool: true, // Use connection pooling
+    maxConnections: 1, // Limit connections
+    maxMessages: 3, // Max messages per connection
   };
 
   // Gmail-specific configuration
@@ -108,13 +118,19 @@ async function initializeTransporter() {
       console.log(`📧 App Password: ${passLength > 0 ? '***' + EMAIL_CONFIG.auth.pass.substring(passLength - 4) : 'not set'} (${passLength} chars)`);
       
       // Verify connection (only once on initialization)
-      try {
-        await transporter.verify();
-        console.log("✅ SMTP connection verified successfully");
-      } catch (verifyError) {
-        console.error("❌ SMTP connection verification failed:", verifyError.message);
-        // Don't return null here - let it try to send and fail gracefully
-        // This allows the app to continue even if email is misconfigured
+      // Skip verification in production to avoid timeout issues on Render
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (!isProduction) {
+        try {
+          await transporter.verify();
+          console.log("✅ SMTP connection verified successfully");
+        } catch (verifyError) {
+          console.error("❌ SMTP connection verification failed:", verifyError.message);
+          // Don't return null here - let it try to send and fail gracefully
+          // This allows the app to continue even if email is misconfigured
+        }
+      } else {
+        console.log("📧 Production mode: Skipping SMTP verification (will verify on first send)");
       }
     }
   }
@@ -307,7 +323,7 @@ Webhook processed and saved to database successfully.
     // Log error but don't throw (don't break webhook processing if email fails)
     console.error("❌ Error sending email:", error.message);
     
-    // Provide helpful troubleshooting for Gmail authentication errors
+    // Provide helpful troubleshooting for different error types
     if (error.code === 'EAUTH' && EMAIL_CONFIG.host.includes('gmail.com')) {
       console.error("🔧 Gmail Authentication Troubleshooting:");
       console.error("   1. Verify 2-Step Verification is enabled on your Google account");
@@ -315,6 +331,13 @@ Webhook processed and saved to database successfully.
       console.error("   3. Use the 16-character app password (spaces are optional)");
       console.error("   4. Make sure EMAIL_USER is your full Gmail address");
       console.error("   5. The app password should be exactly as shown by Google");
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+      console.error("🔧 Connection Timeout Troubleshooting:");
+      console.error("   1. Check if SMTP port is accessible from your hosting provider");
+      console.error("   2. Some hosting providers (like Render) may block SMTP connections");
+      console.error("   3. Consider using a service like SendGrid, Mailgun, or AWS SES");
+      console.error("   4. Or use a different email provider that allows SMTP from cloud hosts");
+      console.error("   5. Verify firewall/network settings allow outbound SMTP connections");
     }
     
     console.error("Email error details:", error);
