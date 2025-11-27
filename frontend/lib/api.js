@@ -11,9 +11,7 @@
  */
 
 import axios from "axios";
-
-// Get API URL from environment or use default
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { API_URL } from "./config";
 
 // Create axios instance with default config
 const apiClient = axios.create({
