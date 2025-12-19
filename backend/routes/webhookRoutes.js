@@ -6,7 +6,7 @@
  */
 
 import express from "express";
-import { handleWebhook } from "../controllers/webhookController.js";
+import { handleWebhook, billGenerateHandler } from "../controllers/webhookController.js";
 
 const router = express.Router();
 
@@ -26,6 +26,7 @@ router.post("/crelio", handleWebhook);
  * Requires X-Webhook-Token header for authentication
  */
 router.post("/crelio/webhook", handleWebhook);
+router.post("/crelio/bill-generate", billGenerateHandler);
 
 export default router;
 
