@@ -87,6 +87,7 @@ const createOrFindLab = async (fields, allFields) => {
   return lab;
 };
 
+
 /**
  * Helper function to clean field value (handle empty strings, null, etc.)
  * 
@@ -1173,11 +1174,11 @@ export const handleWebhook = asyncHandler(async (req, res) => {
 
 export const billGenerateHandler = async (req, res) => {
   try {
-    const token = req.headers["x-webhook-token"];
-    const expectedToken = process.env.WEBHOOK_SECRET;
-    if (!token || token !== expectedToken) {
-      return res.status(401).json({ success: false, message: "Invalid webhook token" });
-    }
+    // const token = req.headers["x-webhook-token"];
+    // const expectedToken = process.env.WEBHOOK_SECRET;
+    // if (!token || token !== expectedToken) {
+    //   return res.status(401).json({ success: false, message: "Invalid webhook token" });
+    // }
     await RequestDump.create({ request: req.body });
     return res.status(200).json({ success: true, message: "Bill Generate Webhook Received" });
   } catch (error) {
