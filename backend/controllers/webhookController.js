@@ -87,6 +87,7 @@ const createOrFindLab = async (fields, allFields) => {
   return lab;
 };
 
+
 /**
  * Helper function to clean field value (handle empty strings, null, etc.)
  * 
