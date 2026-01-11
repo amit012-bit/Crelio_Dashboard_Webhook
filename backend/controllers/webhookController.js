@@ -20,6 +20,8 @@ import { sendWebhookAlert } from "../services/emailService.js";
 import fs from "fs";
 import path from "path";
 import RequestDump from "../models/RequestDump.js";
+import ReportStatusTracker from "../models/ReportStatusTracker.js";
+import SampleStatusTracker from "../models/SampleStatusTracker.js";
 
 /**
  * Create or find Lab from webhook data
@@ -1183,6 +1185,26 @@ export const billGenerateHandler = async (req, res) => {
     return res.status(200).json({ success: true, message: "Bill Generate Webhook Received" });
   } catch (error) {
     console.error("❌ Error generating bill:", error.message);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const trackReportStatusHandler = async (req, res) => {
+  try {
+    await ReportStatusTracker.create({ request: req.body });
+    return res.status(200).json({ success: true, message: "Report webhook data received" });
+  } catch (error) {
+    console.error("❌ Error receiving report webhook data:", error.message);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const trackSampleStatusHandler = async (req, res) => {
+  try {
+    await SampleStatusTracker.create({ request: req.body });
+    return res.status(200).json({ success: true, message: "Sample webhook data received" });
+  } catch (error) {
+    console.error("❌ Error receiving sample webhook data:", error.message);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

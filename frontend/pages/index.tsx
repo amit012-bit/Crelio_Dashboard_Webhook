@@ -18,7 +18,7 @@ import ActivityChart from '@/components/ActivityChart'
 import SuccessStats from '@/components/SuccessStats'
 import DoctorList from '@/components/DoctorList'
 import PatientTable from '@/components/PatientTable'
-import { getDashboardStats, getTodayPatients, getAllPatients, getActivityData, getSuccessStats, getAllDoctors } from '@/lib/api'
+import { getDashboardStats, getTodayPatients, getActivityData, getSuccessStats, getAllDoctors } from '@/lib/api'
 import { 
   HiClipboardList, 
   HiUsers, 
@@ -30,7 +30,6 @@ import {
 export default function Dashboard() {
   // State for dashboard data
   const [stats, setStats] = useState<any>(null)
-  const [todayPatients, setTodayPatients] = useState<any[]>([])
   const [activityData, setActivityData] = useState<any[]>([])
   const [successStats, setSuccessStats] = useState<any[]>([])
   const [doctors, setDoctors] = useState<any[]>([])
@@ -44,9 +43,8 @@ export default function Dashboard() {
         
         // Fetch all data in parallel
         // Use getAllPatients instead of getTodayPatients to show all recent patients
-        const [statsRes, patientsRes, activityRes, successRes, doctorsRes] = await Promise.all([
+        const [statsRes, activityRes, successRes, doctorsRes] = await Promise.all([
           getDashboardStats(),
-          getAllPatients({ page: 1, limit: 50 }), // Get all recent patients (not just today's)
           getActivityData(6),
           getSuccessStats(),
           getAllDoctors(),
@@ -57,8 +55,6 @@ export default function Dashboard() {
         // Patients API returns: { success: true, count: number, data: [...] } or { success: true, data: [...] }
         // Other APIs return: { success: true, data: [...] }
         const statsData = (statsRes as any)?.data || statsRes
-        // Extract patients array from response (handle both getAllPatients and getTodayPatients format)
-        const patientsData = (patientsRes as any)?.data || (patientsRes as any)?.data?.data || []
         // Extract activity data array
         const activityDataResult = (activityRes as any)?.data || []
         // Extract success stats array
@@ -67,7 +63,6 @@ export default function Dashboard() {
         const doctorsData = (doctorsRes as any)?.data || []
         
         setStats(statsData)
-        setTodayPatients(patientsData)
         setActivityData(activityDataResult)
         setSuccessStats(successData)
         setDoctors(doctorsData)
@@ -75,14 +70,11 @@ export default function Dashboard() {
         // Debug logging (remove in production)
         console.log('📊 Dashboard Data Loaded:', {
           stats: statsData,
-          patients: patientsData,
-          patientsCount: patientsData?.length || 0,
           activity: activityDataResult,
           success: successData,
           doctors: doctorsData,
         })
         console.log('🔍 Raw API Responses:', {
-          patientsRes: patientsRes,
           doctorsRes: doctorsRes,
         })
       } catch (error: any) {
@@ -96,8 +88,8 @@ export default function Dashboard() {
     fetchDashboardData()
     
     // Refresh data every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000)
-    return () => clearInterval(interval)
+    // const interval = setInterval(fetchDashboardData, 30000)
+    // return () => clearInterval(interval)
   }, [])
 
   // Animation variants
@@ -170,7 +162,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* All Stats Cards - 5 cards in single row */}
-        <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        {/* <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <StatsCard
             title="New Tasks"
             value={stats?.reports?.today || 0}
@@ -211,34 +203,32 @@ export default function Dashboard() {
             icon={<HiUserCircle />}
             small
           />
-        </motion.div>
+        </motion.div> */}
 
         {/* Bottom Section: Activity Chart + Success Stats + Doctor List + Appointment Table */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
           {/* Left Column */}
+          <div className="space-y-4">
+            {/* Online Appointment Table */}
+            <motion.div variants={itemVariants}>
+              <PatientTable />
+            </motion.div>
+            {/* Doctor List */}
+            {/* <motion.div variants={itemVariants}>
+              <DoctorList doctors={doctors.slice(0, 5)} />
+            </motion.div> */}
+          </div>
+
+          {/* Right Column */}
           <div className="space-y-4">
             {/* Activity Chart */}
             <motion.div variants={itemVariants}>
               <ActivityChart data={activityData} />
             </motion.div>
-
-            {/* Doctor List */}
-            <motion.div variants={itemVariants}>
-              <DoctorList doctors={doctors.slice(0, 5)} />
-            </motion.div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-4">
             {/* Success Stats */}
-            <motion.div variants={itemVariants}>
+            {/* <motion.div variants={itemVariants}>
               <SuccessStats data={successStats} />
-            </motion.div>
-
-            {/* Online Appointment Table */}
-            <motion.div variants={itemVariants}>
-              <PatientTable patients={todayPatients.slice(0, 5)} />
-            </motion.div>
+            </motion.div> */}
           </div>
         </div>
       </motion.div>
