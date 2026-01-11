@@ -6,7 +6,7 @@
  */
 
 import express from "express";
-import { handleWebhook, billGenerateHandler } from "../controllers/webhookController.js";
+import { handleWebhook, billGenerateHandler, trackSampleStatusHandler, trackReportStatusHandler } from "../controllers/webhookController.js";
 
 const router = express.Router();
 
@@ -27,6 +27,8 @@ router.post("/crelio", handleWebhook);
  */
 router.post("/crelio/webhook", handleWebhook);
 router.post("/crelio/bill-generate", billGenerateHandler);
+router.post("/crelio/sample-status", trackSampleStatusHandler);
+router.post("/crelio/report-status", trackReportStatusHandler);
 
 export default router;
 

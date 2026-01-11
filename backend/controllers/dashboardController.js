@@ -15,6 +15,7 @@ import Patient from "../models/Patient.js";
 import Report from "../models/Report.js";
 import Doctor from "../models/Doctor.js";
 import Lab from "../models/Lab.js";
+import RequestDump from "../models/RequestDump.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 
 /**
@@ -202,12 +203,40 @@ export const getPatientsByStatus = asyncHandler(async (req, res) => {
  * Returns paginated list of all patients
  */
 export const getAllPatients = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 20, status, search } = req.query;
-  
+
+  const { page = 1, limit = 20, status, search, date, fromDate, toDate } = req.query;
+
   const skip = (parseInt(page) - 1) * parseInt(limit);
-  
+
+  // Handle date range: support both old 'date' parameter and new 'fromDate'/'toDate'
+  let startDate, endDate;
+  if (fromDate && toDate) {
+    // Use date range if both fromDate and toDate are provided
+    startDate = new Date(fromDate);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999); // Include the entire end date
+  } else if (date) {
+    // Backward compatibility: use single date parameter
+    startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+  } else {
+    // Default: today
+    startDate = new Date(new Date().setHours(0, 0, 0, 0));
+    endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+  }
+
   // Build query
-  const query = {};
+  const query = {
+    createdAt: {
+      $gte: startDate,
+      $lte: endDate,
+    },
+  };
+
   if (status) query.status = status;
   if (search) {
     query.$or = [
@@ -215,18 +244,19 @@ export const getAllPatients = asyncHandler(async (req, res) => {
       { patientId: { $regex: search, $options: "i" } },
       { phone: { $regex: search, $options: "i" } },
       { email: { $regex: search, $options: "i" } },
+      { "request.Patient Name": { $regex: search, $options: "i" } },
+      { "request.Mobile Number": { $regex: search, $options: "i" } },
     ];
   }
-  
+
   const [patients, total] = await Promise.all([
-    Patient.find(query)
-      .populate("assignedDoctor", "name specialty profileImage")
+    RequestDump.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit)),
-    Patient.countDocuments(query),
+    RequestDump.countDocuments(query),
   ]);
-  
+
   res.json({
     success: true,
     pagination: {
