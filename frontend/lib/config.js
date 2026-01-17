@@ -1,10 +1,3 @@
-/**
- * Application Configuration
- * 
- * Centralized configuration for API URLs and other settings.
- * Update the API_URL here to point to your deployed backend.
- */
-
 // Backend API URL
 // Production: Your deployed backend URL
 // Development: Local backend URL

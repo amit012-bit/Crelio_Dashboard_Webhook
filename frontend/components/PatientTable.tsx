@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/router'
 import { getAllPatients } from '@/lib/api'
 import { HiSearch, HiCalendar } from 'react-icons/hi'
 
@@ -15,6 +16,7 @@ const getTodayDate = () => {
 }
 
 export default function PatientTable() {
+  const router = useRouter()
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -22,6 +24,11 @@ export default function PatientTable() {
   const [toDate, setToDate] = useState(getTodayDate())
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleRowClick = (patient: Patient) => {
+    const billId = patient.request?.['billId'] 
+    router.push(`/patient/${billId}`)
+  }
 
   // Debounce search query
   useEffect(() => {
@@ -175,7 +182,8 @@ export default function PatientTable() {
                 return (
                   <motion.tr
                     key={patient._id || index}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors bg-white"
+                    onClick={() => handleRowClick(patient)}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors bg-white cursor-pointer"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.05 }}
