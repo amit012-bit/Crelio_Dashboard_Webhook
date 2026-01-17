@@ -1,10 +1,3 @@
-/**
- * Sidebar Component
- * 
- * Navigation sidebar with menu items.
- * Exact design match to Medicare dashboard sidebar.
- */
-
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -34,35 +27,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       title: 'Patients',
       path: '/patients',
       icon: '👥', // Two people icon
-    },
-    {
-      title: 'Doctors',
-      path: '/doctors',
-      icon: '📈', // ECG/heartbeat icon
-    },
-  ]
-
-  const componentItems = [
-    {
-      title: 'Support',
-      path: '/support',
-      icon: '🎧', // Headphone icon
-    },
-    {
-      title: 'Features',
-      path: '/features',
-      icon: '📝', // Document with pencil
-    },
-    {
-      title: 'Forms & Charts',
-      path: '/forms',
-      icon: '📊', // Pie chart icon
-    },
-    {
-      title: 'Tables',
-      path: '/tables',
-      icon: '⊞', // Grid icon
-    },
+    }
   ]
 
   const isActive = (path: string) => router.pathname === path
@@ -145,58 +110,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                       <span className="text-gray-400 text-xs">→</span>
                     ) : null}
                   </span>
-                )}
-              </Link>
-            )
-          })}
-
-          {/* COMPONENTS Section */}
-          {isOpen && (
-            <div className="px-4 mb-2 mt-6">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                COMPONENTS
-              </h2>
-            </div>
-          )}
-
-          {componentItems.map((item, index) => {
-            const active = isActive(item.path)
-            return (
-              <Link
-                key={index}
-                href={item.path}
-                className={`relative flex items-center px-4 py-3 transition-colors ${
-                  active
-                    ? 'text-teal-500'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {/* Vertical bar for active item */}
-                {active && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 rounded-r"></div>
-                )}
-
-                {/* Icon */}
-                <span className={`text-lg mr-3 ${active ? 'text-teal-500' : 'text-gray-600'}`}>
-                  {item.icon}
-                </span>
-
-                {/* Text */}
-                {isOpen && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`flex-1 text-sm font-medium ${
-                      active ? 'text-teal-500' : 'text-gray-700'
-                    }`}
-                  >
-                    {item.title}
-                  </motion.span>
-                )}
-
-                {/* Arrow for inactive items */}
-                {isOpen && !active && (
-                  <span className="ml-auto text-gray-400 text-xs">→</span>
                 )}
               </Link>
             )

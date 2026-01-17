@@ -1,38 +1,11 @@
-/**
- * Dashboard Home Page
- * 
- * This is the main dashboard page that displays:
- * - Welcome banner
- * - Key statistics cards
- * - Activity chart
- * - Success stats
- * - Doctor list
- * - Recent appointments/patients
- */
-
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '@/components/Layout'
-import StatsCard from '@/components/StatsCard'
-import ActivityChart from '@/components/ActivityChart'
-import SuccessStats from '@/components/SuccessStats'
-import DoctorList from '@/components/DoctorList'
 import PatientTable from '@/components/PatientTable'
-import { getDashboardStats, getTodayPatients, getActivityData, getSuccessStats, getAllDoctors } from '@/lib/api'
-import { 
-  HiClipboardList, 
-  HiUsers, 
-  HiBell, 
-  HiHome, 
-  HiUserCircle 
-} from 'react-icons/hi'
+import { getDashboardStats, getActivityData } from '@/lib/api'
 
 export default function Dashboard() {
-  // State for dashboard data
-  const [stats, setStats] = useState<any>(null)
   const [activityData, setActivityData] = useState<any[]>([])
-  const [successStats, setSuccessStats] = useState<any[]>([])
-  const [doctors, setDoctors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // Fetch dashboard data on component mount
@@ -42,40 +15,20 @@ export default function Dashboard() {
         setLoading(true)
         
         // Fetch all data in parallel
-        // Use getAllPatients instead of getTodayPatients to show all recent patients
-        const [statsRes, activityRes, successRes, doctorsRes] = await Promise.all([
+        const [statsRes, activityRes] = await Promise.all([
           getDashboardStats(),
           getActivityData(6),
-          getSuccessStats(),
-          getAllDoctors(),
         ])
 
-        // API functions return response.data from axios
-        // Stats API returns: { success: true, data: {...} }
-        // Patients API returns: { success: true, count: number, data: [...] } or { success: true, data: [...] }
-        // Other APIs return: { success: true, data: [...] }
         const statsData = (statsRes as any)?.data || statsRes
-        // Extract activity data array
         const activityDataResult = (activityRes as any)?.data || []
-        // Extract success stats array
-        const successData = (successRes as any)?.data || []
-        // Extract doctors array
-        const doctorsData = (doctorsRes as any)?.data || []
         
-        setStats(statsData)
         setActivityData(activityDataResult)
-        setSuccessStats(successData)
-        setDoctors(doctorsData)
+
         
-        // Debug logging (remove in production)
         console.log('📊 Dashboard Data Loaded:', {
           stats: statsData,
           activity: activityDataResult,
-          success: successData,
-          doctors: doctorsData,
-        })
-        console.log('🔍 Raw API Responses:', {
-          doctorsRes: doctorsRes,
         })
       } catch (error: any) {
         console.error('❌ Error fetching dashboard data:', error)
@@ -87,12 +40,8 @@ export default function Dashboard() {
 
     fetchDashboardData()
     
-    // Refresh data every 30 seconds
-    // const interval = setInterval(fetchDashboardData, 30000)
-    // return () => clearInterval(interval)
   }, [])
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -216,18 +165,6 @@ export default function Dashboard() {
             {/* Doctor List */}
             {/* <motion.div variants={itemVariants}>
               <DoctorList doctors={doctors.slice(0, 5)} />
-            </motion.div> */}
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-4">
-            {/* Activity Chart */}
-            <motion.div variants={itemVariants}>
-              <ActivityChart data={activityData} />
-            </motion.div>
-            {/* Success Stats */}
-            {/* <motion.div variants={itemVariants}>
-              <SuccessStats data={successStats} />
             </motion.div> */}
           </div>
         </div>

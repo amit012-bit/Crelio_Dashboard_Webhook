@@ -1,15 +1,3 @@
-/**
- * API Client
- * 
- * This module provides functions to interact with the backend API.
- * It handles all HTTP requests to the backend server.
- * 
- * Features:
- * - Centralized API configuration
- * - Error handling
- * - Request/response interceptors
- */
-
 import axios from "axios";
 import { API_URL } from "./config";
 
@@ -152,6 +140,16 @@ export const getActivityData = async (months = 6) => {
  */
 export const getSuccessStats = async () => {
   const response = await apiClient.get("/dashboard/success-stats");
+  return response.data;
+};
+
+export const getPatientBillById = async (id) => {
+  const response = await apiClient.get(`/dashboard/patients/bill?id=${id}`);
+  return response.data;
+};
+
+export const getPatientTests = async (id) => {
+  const response = await apiClient.get(`/dashboard/patients/tests?id=${id}`);
   return response.data;
 };
 
