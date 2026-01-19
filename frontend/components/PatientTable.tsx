@@ -213,8 +213,8 @@ export default function PatientTable() {
                     </span>
                   </td>
                   <td className="py-2 px-3 text-xs text-gray-700">
-                    <span className="px-1 py-1 text-xs rounded-full font-medium bg-yellow-300">
-                      Pending
+                    <span className={`px-1 py-1 text-xs rounded-full ${patient?.request?.dueAmount === 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {patient?.request?.dueAmount === 0 ? 'Completed' : 'Pending'}
                     </span>
                   </td>
                   </motion.tr>
