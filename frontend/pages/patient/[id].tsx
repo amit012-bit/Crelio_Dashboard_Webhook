@@ -176,8 +176,8 @@ export default function PatientDetail() {
                     <div>
                       <p className="text-sm font-medium text-gray-800">{test.testname}</p>
                     </div>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-200 text-green-800 rounded-full">
-                      {test.status || 'N/A'}
+                    <span className={`px-2 py-1 text-xs font-medium ${test.status === 'Sample Received' ? 'text-green-500' : 'text-red-500'}`}>
+                      {test.status}
                     </span>
                   </div>
                 </div>

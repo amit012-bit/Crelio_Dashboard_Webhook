@@ -91,7 +91,7 @@ export default function PatientTable() {
       transition={{ duration: 0.3 }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-bold text-gray-800">Online Appointment</h3>
+        <h3 className="text-base font-bold text-gray-800">Bill List ({patients?.length})</h3>
       </div>
 
       {/* Search and Date Filter Controls */}
