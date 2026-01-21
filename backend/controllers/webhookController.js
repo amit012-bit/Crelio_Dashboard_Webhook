@@ -2,6 +2,7 @@ import Patient from "../models/Patient.js";
 import RequestDump from "../models/RequestDump.js";
 import ReportStatusTracker from "../models/ReportStatusTracker.js";
 import SampleStatusTracker from "../models/SampleStatusTracker.js";
+import Report from "../models/Report.js";
 
 export const patientRegisterHandler = async (req, res) => {
   try {
@@ -32,6 +33,39 @@ export const billGenerateHandler = async (req, res) => {
 export const trackReportStatusHandler = async (req, res) => {
   try {
     await ReportStatusTracker.create({ request: req.body });
+    const {labReportId, billId, testID: testId, status, "Signing Doctor": signingDoctor, "Sample Date": sampleDate, reportBase64} = req.body;
+
+    // Build dynamic update object
+    const update = {
+      status,
+    };
+
+    // Status-based fields
+    if (status === "Report Signed" && signingDoctor) {
+      update.signingDoctor = signingDoctor;
+      update.sampleDate = sampleDate;
+    }
+
+    if (status === "Report PDF (Webhook)" && reportBase64) {
+      update.reportBase64 = reportBase64;
+    }
+
+    await Report.findOneAndUpdate(
+      { billId, testId },           // unique key
+      {
+        $set: update,               // update status + conditional fields
+        $setOnInsert: {             // only on first create
+          labReportId,
+          billId,
+          testId,
+        },
+      },
+      {
+        upsert: true,               // create if not exists
+        new: true,
+      }
+    );
+
     return res.status(200).json({ success: true, message: "Report webhook data received" });
   } catch (error) {
     console.error("❌ Error receiving report webhook data:", error.message);

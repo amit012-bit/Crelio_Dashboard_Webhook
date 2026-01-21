@@ -3,6 +3,7 @@ import {
   getAllPatients,
   getPatientBillById,
   getPatientTests,
+  getPatientReports,
 } from "../controllers/dashboardController.js";
 
 const router = express.Router();
@@ -11,6 +12,6 @@ const router = express.Router();
 router.get("/patients", getAllPatients);
 router.get("/patients/bill", getPatientBillById);
 router.get("/patients/tests", getPatientTests);
-
+router.get("/patients/reports", getPatientReports);
 export default router;
 
