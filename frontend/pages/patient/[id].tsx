@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
 import Layout from '@/components/Layout'
-import { HiDownload, HiX, HiUserCircle, HiArrowLeft } from 'react-icons/hi'
-import { getPatientBillById, getPatientTests } from '@/lib/api'
+import { HiDownload, HiPlus, HiUserCircle, HiArrowLeft, HiPrinter, HiBeaker, HiDocument } from 'react-icons/hi'
+import { getPatientBillById, getPatientTests, getPatientReports } from '@/lib/api'
 
 export default function PatientDetail() {
   const router = useRouter()
   const { id } = router.query
 
   const [patientBill, setPatientBill] = useState<any>(null)
-  const [tests, setTests] = useState<[]>([])
-  const [reports, setReports] = useState<[]>([])
+  const [tests, setTests] = useState<any[]>([])
+  const [reports, setReports] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchPatientBill() {
@@ -29,7 +29,6 @@ export default function PatientDetail() {
     }
   }, [id]);
 
-  
   useEffect(() => {
     async function fetchPatientTests() {
       try {
@@ -38,13 +37,19 @@ export default function PatientDetail() {
         const billTests = patientBill?.data?.billInfoDetails || [];
         const statusTests = data?.data || [];
   
-        const statusMap = new Map(
-          statusTests.map((t: any) => [t.testID?.[0], t.Status])
-        );
+        const statusMap = statusTests.reduce((acc: any, t: any) => {
+          const key = t.testID?.[0];
+          if (key) {
+            acc[key] = t; // store entire object (or t.Status if you want only status)
+          }
+          return acc;
+        }, {});
+        
   
         const finalTests = billTests.map((test: any) => ({
           ...test,
-          status: statusMap.get(test.testId) || "Not Collected",
+          status: statusMap[test.testId]?.Status || "Not Collected",
+          timestamp: statusMap[test.testId]?.accessionDate || null,
         }));
   
         setTests(finalTests);
@@ -58,12 +63,63 @@ export default function PatientDetail() {
       fetchPatientTests();
     }
   }, [id, patientBill]);
+
+  useEffect(() => {
+    async function fetchPatientReports() {
+      try {
+        const data = await getPatientReports(id);
+        setReports(data?.data || []);
+      } catch (error) {
+        console.error("Error fetching patient reports:", error);
+        setReports([]);
+      }
+    }
   
+    if (id) {
+      fetchPatientReports();
+    }
+  }, [id]);
 
-
-  console.log(tests, 'tests after fetch--------------')
+  console.log(patientBill, 'patientBill');
+  console.log(tests, 'tests');
+  console.log(reports, 'reports');
  
-  const [activeTab, setActiveTab] = useState<'future' | 'past' | 'planned'>('future')
+  const [activeTab, setActiveTab] = useState<'tests' | 'reports' >('tests')
+
+  // Helper function to get timeline stages for a test
+  const getTimelineStages = (test: any, report: any) => {
+    const stages = [
+      {
+        id: 'billGeneration',
+        label: 'Bill Generation',
+        icon: HiPlus,
+        completed: true, // Always completed if test exists
+        timestamp: patientBill?.data?.billTime || null,
+      },
+      {
+        id: 'sample',
+        label: 'Sample Collection',
+        icon: HiBeaker,
+        completed: test.status === 'Sample Received',
+        timestamp: test.timestamp || null,
+      },
+      {
+        id: 'report',
+        label: report?.status || 'Report Generation',
+        icon: HiDocument,
+        completed: report?.status ? true : false,
+        timestamp: report?.sampleDate || null,
+      },
+      {
+        id: 'print',
+        label: 'Report Print',
+        icon: HiPrinter,
+        completed: report?.status === 'Report PDF (Webhook)',
+        timestamp: null,
+      }
+    ];
+    return stages;
+  };
 
   return (
     <Layout>
@@ -133,8 +189,8 @@ export default function PatientDetail() {
           </motion.div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Future Visits Card */}
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
+          {/* Tests Card */}
           <motion.div
             className="bg-white rounded-2xl p-6 shadow-sm"
             initial={{ opacity: 0, y: 20 }}
@@ -144,9 +200,9 @@ export default function PatientDetail() {
             {/* Tabs */}
             <div className="flex border-b border-gray-200 mb-4">
               <button
-                onClick={() => setActiveTab('future')}
+                onClick={() => setActiveTab('tests')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'future'
+                  activeTab === 'tests'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
@@ -154,9 +210,9 @@ export default function PatientDetail() {
                 Tests ({tests?.length || 0})
               </button>
               <button
-                onClick={() => setActiveTab('past')}
+                onClick={() => setActiveTab('reports')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'past'
+                  activeTab === 'reports'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
@@ -165,72 +221,122 @@ export default function PatientDetail() {
               </button>
             </div>
 
-            {/* Visit List */}
-            <div className="space-y-3">
-              {activeTab === 'future' && tests?.length > 0 && tests?.map((test: any) => (
-                <div
-                  key={test?.id}
-                  className={`p-4 rounded-lg border-l-4`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{test.testname}</p>
+            {/* Tests List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeTab === 'tests' && tests?.length > 0 && tests?.map((test: any) => {
+                // Find matching report for this test
+                const report = reports.find((r: any) => r.testId === test.testId);
+                const stages = getTimelineStages(test, report);
+                
+                return (
+                  <div
+                    key={test?.id || test?.testId}
+                    className="p-6 rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
+                  >
+                    {/* Test Name */}
+                    <div className="mb-6">
+                      <p className="text-lg font-semibold text-gray-800">{test.testname}</p>
                     </div>
-                    <span className="px-2 py-1 text-xs font-medium bg-green-200 text-green-800 rounded-full">
-                      {test.status || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {activeTab === 'past' && (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  Past visits data will be displayed here
-                </div>
-              )}
-              {activeTab === 'planned' && (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  Planned treatments data will be displayed here
-                </div>
-              )}
-            </div>
-          </motion.div>
 
-          {/* Files Card */}
-          <motion.div
-            className="bg-white rounded-2xl p-6 shadow-sm"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Files</h3>
-              <button className="px-4 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-lg font-medium hover:bg-blue-100 transition-colors">
-                <HiDownload className="inline-block w-4 h-4 mr-1" />
-                DOWNLOAD
-              </button>
-            </div>
-            <div className="space-y-2">
-              {patientBill?.['Patient Files']?.map((file: any, index: number) => (
-                <div
-                  key={file.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                    <p className="text-xs text-gray-500">{file.size}</p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-2">
-                    <button className="text-blue-600 hover:text-blue-700">
-                      <HiDownload className="w-4 h-4" />
-                    </button>
-                    {index === 1 && (
-                      <button className="text-red-600 hover:text-red-700">
-                        <HiX className="w-4 h-4" />
-                      </button>
+                    {/* Vertical Timeline */}
+                    <div className="relative">
+                      {stages.map((stage, index) => {
+                        const Icon = stage.icon;
+                        const isLast = index === stages.length - 1;
+                        const isCompleted = stage.completed;
+                        const nextStage = stages[index + 1];
+                        const isNextCompleted = nextStage?.completed || false;
+                        
+                        return (
+                          <div key={stage.id} className="relative flex items-start gap-4 pb-6">
+                            {/* Vertical Line */}
+                            {!isLast && (
+                              <div
+                                className={`absolute left-4 top-12 w-0.5 h-full ${
+                                  isCompleted && isNextCompleted
+                                    ? 'bg-green-500'
+                                    : isCompleted
+                                    ? 'bg-green-500'
+                                    : 'bg-gray-300'
+                                }`}
+                                style={{ height: 'calc(100% - 1rem)' }}
+                              />
+                            )}
+                            
+                            {/* Icon Circle */}
+                            <div
+                              className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full ${
+                                isCompleted
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-300 text-gray-600'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 pt-1">
+                              <p className={`text-sm font-medium ${
+                                isCompleted ? 'text-gray-800' : 'text-gray-500'
+                              }`}>
+                                {stage.label}
+                              </p>
+                              {stage.timestamp ? (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(stage.timestamp).toLocaleString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: '2-digit'
+                                  }).replace(',', '')}
+                                </p>
+                              ) : !isCompleted ? (
+                                <p className="text-xs text-gray-400 mt-1">Pending</p>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* View Report Button */}
+                    {report?.reportBase64 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => {
+                            // Decode base64 and open in new window
+                            const byteCharacters = atob(report.reportBase64);
+                            const byteNumbers = new Array(byteCharacters.length);
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                              byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                            const blob = new Blob([byteArray], { type: 'application/pdf' });
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          <HiDownload className="w-4 h-4" />
+                          View Report
+                        </button>
+                      </div>
                     )}
                   </div>
+                );
+              })}
+              {activeTab === 'tests' && (!tests || tests.length === 0) && (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No tests available for this patient
                 </div>
-              ))}
+              )}
+              {activeTab === 'reports' && (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  Reports data will be displayed here
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
