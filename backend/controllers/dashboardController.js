@@ -6,8 +6,7 @@ import Report from "../models/Report.js";
 
 export const getAllPatients = asyncHandler(async (req, res) => {
 
-  const { page = 1, limit = 20, status, search, date, fromDate, toDate } = req.query;
-
+  const { page = 1, limit = 20, status, search, fromDate, toDate } = req.query;
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   // Handle date range: support both old 'date' parameter and new 'fromDate'/'toDate'
@@ -18,12 +17,6 @@ export const getAllPatients = asyncHandler(async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
     endDate = new Date(toDate);
     endDate.setHours(23, 59, 59, 999); // Include the entire end date
-  } else if (date) {
-    // Backward compatibility: use single date parameter
-    startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 1);
   } else {
     // Default: today
     startDate = new Date(new Date().setHours(0, 0, 0, 0));
@@ -41,15 +34,35 @@ export const getAllPatients = asyncHandler(async (req, res) => {
 
   if (status) query.status = status;
   if (search) {
+    const searchNumber = Number(search);
+    const isNumber = !isNaN(searchNumber);
     query.$or = [
-      { name: { $regex: search, $options: "i" } },
-      { patientId: { $regex: search, $options: "i" } },
-      { phone: { $regex: search, $options: "i" } },
-      { email: { $regex: search, $options: "i" } },
+      // Partial match on Patient Name (string)
       { "request.Patient Name": { $regex: search, $options: "i" } },
-      { "request.Mobile Number": { $regex: search, $options: "i" } },
+  
+      // Partial match on billId (number)
+      ...(isNumber ? [{
+        $expr: {
+          $regexMatch: {
+            input: { $toString: "$request.billId" },
+            regex: search,
+            options: "i"
+          }
+        }
+      }] : []),
+  
+      // Partial match on Patient Id (number)
+      ...(isNumber ? [{
+        $expr: {
+          $regexMatch: {
+            input: { $toString: "$request.Patient Id" },
+            regex: search,
+            options: "i"
+          }
+        }
+      }] : [])
     ];
-  }
+  }  
 
   const [patients, total] = await Promise.all([
     RequestDump.find(query)
@@ -70,7 +83,6 @@ export const getAllPatients = asyncHandler(async (req, res) => {
     data: patients,
   });
 });
-
 
 export const getPatientBillById = asyncHandler(async (req, res) => {
   const { id } = req.query;
