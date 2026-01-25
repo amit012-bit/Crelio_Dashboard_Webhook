@@ -158,5 +158,10 @@ export const getPatientReports = async (id) => {
   return response.data;
 };
 
+export const getPatientReportStatus = async (id) => {
+  const response = await apiClient.get(`/dashboard/patients/report-status?id=${id}`);
+  return response.data;
+};
+
 export default apiClient;
 

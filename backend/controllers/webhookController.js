@@ -3,6 +3,7 @@ import RequestDump from "../models/RequestDump.js";
 import ReportStatusTracker from "../models/ReportStatusTracker.js";
 import SampleStatusTracker from "../models/SampleStatusTracker.js";
 import Report from "../models/Report.js";
+import { consolidatePatientFromWebhook } from "../services/patientConsolidationService.js";
 
 export const patientRegisterHandler = async (req, res) => {
   try {
@@ -23,6 +24,10 @@ export const billGenerateHandler = async (req, res) => {
     //   return res.status(401).json({ success: false, message: "Invalid webhook token" });
     // }
     await RequestDump.create({ request: req.body });
+    
+    // Trigger patient consolidation automatically (runs in background)
+    consolidatePatientFromWebhook('billGenerate', req.body);
+    
     return res.status(200).json({ success: true, message: "Bill Generate Webhook Received" });
   } catch (error) {
     console.error("❌ Error generating bill:", error.message);
@@ -66,6 +71,9 @@ export const trackReportStatusHandler = async (req, res) => {
       }
     );
 
+    // Trigger patient consolidation automatically (runs in background)
+    consolidatePatientFromWebhook('reportStatus', req.body);
+
     return res.status(200).json({ success: true, message: "Report webhook data received" });
   } catch (error) {
     console.error("❌ Error receiving report webhook data:", error.message);
@@ -76,6 +84,10 @@ export const trackReportStatusHandler = async (req, res) => {
 export const trackSampleStatusHandler = async (req, res) => {
   try {
     await SampleStatusTracker.create({ request: req.body });
+    
+    // Trigger patient consolidation automatically (runs in background)
+    consolidatePatientFromWebhook('sampleStatus', req.body);
+    
     return res.status(200).json({ success: true, message: "Sample webhook data received" });
   } catch (error) {
     console.error("❌ Error receiving sample webhook data:", error.message);

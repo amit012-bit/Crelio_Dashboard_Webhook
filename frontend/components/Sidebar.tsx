@@ -44,7 +44,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* Logo/Header - hidden when collapsed */}
         {isOpen && (
           <div className="px-4 mb-6">
-            <h1 className="text-xl font-bold text-gray-800">Crelio</h1>
+            <h1 className="text-xl font-bold text-gray-800">MedShell</h1>
           </div>
         )}
 

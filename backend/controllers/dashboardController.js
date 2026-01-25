@@ -1,6 +1,7 @@
 import Patient from "../models/Patient.js";
 import RequestDump from "../models/RequestDump.js";
 import SampleStatusTracker from "../models/SampleStatusTracker.js";
+import ReportStatusTracker from "../models/ReportStatusTracker.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import Report from "../models/Report.js";
 
@@ -108,5 +109,16 @@ export const getPatientReports = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     data: reports,
+  });
+});
+
+export const getPatientReportStatus = asyncHandler(async (req, res) => {
+  const { id } = req.query;
+  const reportStatus = await ReportStatusTracker.find({
+    "request.billId": Number(id)
+  }).select("request").sort({ createdAt: -1 });
+  return res.status(200).json({
+    success: true,
+    data: reportStatus.map(rs => rs.request),
   });
 });
