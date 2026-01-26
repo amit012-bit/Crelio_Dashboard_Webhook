@@ -13,6 +13,8 @@ export default function PatientDetail() {
   const [tests, setTests] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [reportStatus, setReportStatus] = useState<any[]>([])
+  const [activeTestTab, setActiveTestTab] = useState<number>(0)
+  const [activeInfoTab, setActiveInfoTab] = useState<number>(0)
 
   useEffect(() => {
     async function fetchPatientBill() {
@@ -81,7 +83,17 @@ export default function PatientDetail() {
   const billData = patientBill || {};
   const billInfoDetails = billData.billInfoDetails || [];
   const labReportDetails = billData.labReportDetails || [];
-  const reportDetails = reportStatus[0]?.reportDetails || [];
+  // Extract reportDetails from all reportStatus entries, not just the first one
+  const reportDetails = reportStatus.length > 0 
+    ? reportStatus.flatMap((rs: any) => rs.reportDetails || [])
+    : [];
+
+  // Reset active tab when tests change
+  useEffect(() => {
+    if (billInfoDetails.length > 0 && activeTestTab >= billInfoDetails.length) {
+      setActiveTestTab(0);
+    }
+  }, [billInfoDetails.length, activeTestTab]);
 
   // Helper to format date
   const formatDate = (dateStr: string | null | undefined) => {
@@ -104,6 +116,32 @@ export default function PatientDetail() {
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined) return 'N/A';
     return `₹${amount.toFixed(2)}`;
+  };
+
+  // Helper to extract initials from test name
+  const getTestInitials = (testName: string | null | undefined, index: number): string => {
+    if (!testName) return `T${index + 1}`;
+    
+    // Remove special characters and split into words
+    const words = testName
+      .replace(/[()&+]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+    
+    // If it's a short acronym (2-4 chars), use it as is
+    if (words.length === 1 && words[0].length <= 4) {
+      return words[0].toUpperCase().substring(0, 3);
+    }
+    
+    // Extract first letter of each significant word (ignore common words)
+    const ignoreWords = ['and', '&', '+', 'the', 'of', 'for'];
+    const initials = words
+      .filter(word => !ignoreWords.includes(word.toLowerCase()))
+      .map(word => word.charAt(0).toUpperCase())
+      .join('');
+    
+    // Limit to 3 characters max
+    return initials.substring(0, 3) || `T${index + 1}`;
   };
 
   // Helper function to get timeline stages for a test
@@ -143,10 +181,10 @@ export default function PatientDetail() {
 
   return (
     <Layout>
-      <div className="p-4 space-y-4 bg-gray-50">
-        {/* Patient Header - Compact with Basic Information */}
+      <div className="p-2 space-y-2 bg-gray-50">
+        {/* Patient Header - Compact with Basic Information - Sticky */}
         <motion.div
-          className="bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl p-4 shadow-sm text-white"
+          className="sticky top-0 z-50 bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl p-3 shadow-sm text-white"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           style={{ boxShadow: '0px 4px 12px rgba(0,0,0,0.08)' }}
@@ -198,6 +236,15 @@ export default function PatientDetail() {
                   <p className="text-sm font-medium text-white">{billData.labPatientId}</p>
                 </div>
               )}
+              {billData.patient_email && (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-white text-opacity-80">Email:</p>
+                  <p className="text-sm font-medium text-white flex items-center gap-1">
+                    <HiMail className="w-3 h-3" />
+                    {billData.patient_email}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Right: DOB and Bill ID - Vertically Stacked */}
@@ -219,9 +266,9 @@ export default function PatientDetail() {
           </motion.div>
 
         {/* Main Content Grid - Left: Pipeline, Right: Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-2">
           {/* Left Column - Progress Pipeline Only */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             {/* Tests with Progress Pipeline */}
           <motion.div
               className="bg-white rounded-xl p-4 shadow-sm"
@@ -229,21 +276,48 @@ export default function PatientDetail() {
             animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
           >
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 rounded-lg">
-                <HiBeaker className="w-4 h-4" />
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1.5 rounded-lg">
+                <HiBeaker className="w-3 h-3" />
                 Test Progress ({billInfoDetails.length})
               </h3>
-              <div className="space-y-4">
-                {billInfoDetails.map((test: any, index: number) => {
+              
+              {/* Test Tabs - Only show if multiple tests */}
+              {billInfoDetails.length > 1 && (
+                <div className="flex gap-2 mb-2 border-b border-gray-200 overflow-x-auto">
+                  {billInfoDetails.map((test: any, index: number) => {
+                    const testName = test.testname || test.TestDetails?.TestName || `Test ${index + 1}`;
+                    const initials = getTestInitials(testName, index);
+                    return (
+              <button
+                        key={index}
+                        onClick={() => setActiveTestTab(index)}
+                        title={testName}
+                        className={`px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                          activeTestTab === index
+                            ? 'text-purple-600 border-b-2 border-purple-600'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {initials}
+              </button>
+                    );
+                  })}
+            </div>
+              )}
+
+              {/* Active Test Pipeline */}
+              {billInfoDetails.length > 0 ? (
+                (() => {
+                  const test = billInfoDetails[activeTestTab];
                   const testReport = reports.find((r: any) => r.testId === test.testId);
                   const testStatus = tests.find((t: any) => t.testID?.includes(test.testId));
                   const reportDetail = reportDetails.find((rd: any) => rd.reportID?.testID === test.testId);
                   const stages = getTimelineStages(test, testReport, testStatus, reportDetail);
                 
                 return (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="border border-gray-200 rounded-lg p-2">
                     {/* Test Name */}
-                      <div className="mb-4">
+                      <div className="mb-2">
                         <h4 className="font-semibold text-gray-800 text-sm mb-1">{test.testname || test.TestDetails?.TestName || 'N/A'}</h4>
                         <p className="text-xs text-gray-500">
                           {test.TestDetails?.TestCode || test.testCode || 'N/A'} • {formatCurrency(test.testAmount)}
@@ -312,7 +386,7 @@ export default function PatientDetail() {
 
                     {/* View Report Button */}
                       {testReport?.reportBase64 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="mt-2 pt-2 border-t border-gray-200">
                         <button
                           onClick={() => {
                               const byteCharacters = atob(testReport.reportBase64);
@@ -334,39 +408,180 @@ export default function PatientDetail() {
                     )}
                   </div>
                 );
-              })}
-                {billInfoDetails.length === 0 && (
-                  <div className="text-center py-8 text-gray-500 text-sm">No tests available</div>
-                )}
-              </div>
+                })()
+              ) : (
+                <div className="text-center py-8 text-gray-500 text-sm">No tests available</div>
+              )}
             </motion.div>
           </div>
 
-          {/* Right Column - All Other Information */}
-          <div className="space-y-4">
-            {/* Address Information */}
-            {(billData.address || billData['Org City'] || billData.state || billData.zip_code) && (
+          {/* Right Column - All Other Information with Tabs */}
+          <div className="space-y-2">
+            {/* Information Tabs */}
+            <div className="bg-white rounded-xl p-1 shadow-sm">
+              <div className="flex gap-1 border-b border-gray-200">
+                {['Patient & Tests', 'Billing & Organization', 'Additional Details'].map((tabName, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setActiveInfoTab(index)}
+                    className={`flex-1 px-3 py-1.5 text-xs font-medium transition-colors ${
+                      activeInfoTab === index
+                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {tabName}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="space-y-2">
+              {/* Tab 1: Patient & Tests */}
+              {activeInfoTab === 0 && (
+                <>
+                  {/* Test Details from Lab Reports */}
+            {labReportDetails.length > 0 && (
               <motion.div
-                className="bg-white rounded-xl p-4 shadow-sm"
+                className="bg-white rounded-xl p-3 shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+              >
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-2 rounded-lg">
+                  <HiBeaker className="w-4 h-4" />
+                  Test & Sample Details
+                </h3>
+                <div className="space-y-2">
+                  {labReportDetails.map((report: any, index: number) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-2">
+                      <h4 className="font-medium text-xs text-gray-800 mb-1">
+                        {report.reportID?.testName || 'N/A'}
+                      </h4>
+                      <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                        {report.reportID?.testCode && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Test Code:</span>
+                            <span>{report.reportID.testCode}</span>
+                          </div>
+                        )}
+                        {report.reportID?.departmentId?.name && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Department:</span>
+                            <span>{report.reportID.departmentId.name}</span>
+                          </div>
+                        )}
+                        {report.reportID?.['Test Type'] && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Test Type:</span>
+                            <span>{report.reportID['Test Type']}</span>
+                          </div>
+                        )}
+                        {report.labReportId && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Lab Report ID:</span>
+                            <span>{report.labReportId}</span>
+                          </div>
+                        )}
+                        {report.reportID?.sampleId && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Sample Type:</span>
+                            <span>{report.reportID.sampleId.name || report.reportID.sampleId.type || 'N/A'}</span>
+                          </div>
+                        )}
+                        {report.collectedSampleId?.accessionNo && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Accession No:</span>
+                            <span>{report.collectedSampleId.accessionNo}</span>
+                          </div>
+                        )}
+                        {report.sampleDate && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Sample Date:</span>
+                            <span>{formatDate(report.sampleDate)}</span>
+                          </div>
+                        )}
+                        {report.collectedSampleId?.collectionTime && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Collection Time:</span>
+                            <span>{formatDate(report.collectedSampleId.collectionTime)}</span>
+                          </div>
+                        )}
+                        {report.reportDate && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Report Date:</span>
+                            <span>{formatDate(report.reportDate)}</span>
+                          </div>
+                        )}
+                        {report.collectedSampleId?.isRejected !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Rejected:</span>
+                            <span className={report.collectedSampleId.isRejected ? 'text-red-600' : 'text-green-600'}>
+                              {report.collectedSampleId.isRejected ? 'Yes' : 'No'}
+                            </span>
+                          </div>
+                        )}
+                        {report.collectedSampleId?.dismissed !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Dismissed:</span>
+                            <span>{report.collectedSampleId.dismissed ? 'Yes' : 'No'}</span>
+                          </div>
+                        )}
+                        {report.collectedSampleId?.redraw !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Redraw:</span>
+                            <span>{report.collectedSampleId.redraw ? 'Yes' : 'No'}</span>
+                          </div>
+                        )}
+                        {report.outsourcedReportFlag !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Outsourced:</span>
+                            <span>{report.outsourcedReportFlag ? 'Yes' : 'No'}</span>
+                          </div>
+                        )}
+                        {report.comments && report.comments.trim() && (
+                          <div className="col-span-3 flex items-center gap-1">
+                            <span className="font-medium">Comments:</span>
+                            <span>{report.comments}</span>
+                          </div>
+                        )}
+                        {report.collectedSampleId?.comments && (
+                          <div className="col-span-3 flex items-center gap-1">
+                            <span className="font-medium">Sample Comments:</span>
+                            <span>{report.collectedSampleId.comments}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Address Information */}
+            {(billData.address || billData.city || billData['Org City'] || billData.state || billData.zip_code || billData.areaOfResidance || billData.landmark) && (
+              <motion.div
+                className="bg-white rounded-xl p-3 shadow-sm"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-2 rounded-lg">
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-2 rounded-lg">
                   <HiLocationMarker className="w-4 h-4" />
                   Address
                 </h3>
-                <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-3 gap-2 text-xs">
                   {billData.address && (
                     <div className="col-span-3 flex items-center gap-2">
                       <p className="text-xs text-gray-500">Street:</p>
                       <p className="font-medium text-gray-800">{billData.address}</p>
                     </div>
                   )}
-                  {billData['Org City'] && (
+                  {(billData.city || billData['Org City']) && (
                     <div className="flex items-center gap-2">
                       <p className="text-xs text-gray-500">City:</p>
-                      <p className="font-medium text-gray-800">{billData['Org City']}</p>
+                      <p className="font-medium text-gray-800">{billData.city || billData['Org City']}</p>
                     </div>
                   )}
                   {billData.state && (
@@ -381,6 +596,12 @@ export default function PatientDetail() {
                       <p className="font-medium text-gray-800">{billData.zip_code}</p>
                     </div>
                   )}
+                  {billData.areaOfResidance && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">Area:</p>
+                      <p className="font-medium text-gray-800">{billData.areaOfResidance}</p>
+                    </div>
+                  )}
                   {billData.landmark && (
                     <div className="flex items-center gap-2">
                       <p className="text-xs text-gray-500">Landmark:</p>
@@ -390,8 +611,13 @@ export default function PatientDetail() {
                 </div>
               </motion.div>
             )}
+                </>
+              )}
 
-            {/* Billing Information */}
+              {/* Tab 2: Billing & Organization */}
+              {activeInfoTab === 1 && (
+                <>
+                  {/* Billing Information */}
             <motion.div
               className="bg-white rounded-xl p-4 shadow-sm"
               initial={{ opacity: 0, y: 20 }}
@@ -423,6 +649,18 @@ export default function PatientDetail() {
                     <p className="font-medium text-gray-800">{formatCurrency(billData.billConcession)}</p>
                   </div>
                 )}
+                {billData.Status && (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500">Status:</p>
+                    <p className="font-medium text-gray-800">{billData.Status}</p>
+                  </div>
+                )}
+                {billData.orderNumber && (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500">Order Number:</p>
+                    <p className="font-medium text-gray-800">{billData.orderNumber}</p>
+                  </div>
+                )}
                 {billData.billTime && (
                   <div className="col-span-3 flex items-center gap-2">
                     <p className="text-xs text-gray-500">Bill Time:</p>
@@ -443,22 +681,28 @@ export default function PatientDetail() {
                     <p className="font-medium text-gray-800">{billData.billPaymentMode}</p>
                   </div>
                 )}
+                {billData.billComments && (
+                  <div className="col-span-3 flex items-center gap-2">
+                    <p className="text-xs text-gray-500">Comments:</p>
+                    <p className="font-medium text-gray-800">{billData.billComments}</p>
+                  </div>
+                )}
               </div>
             </motion.div>
 
             {/* Lab & Organization */}
             {(billData.labId || billData.orgId) && (
               <motion.div
-                className="bg-white rounded-xl p-4 shadow-sm"
+                className="bg-white rounded-xl p-3 shadow-sm"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-2 rounded-lg">
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-2 rounded-lg">
                   <HiOfficeBuilding className="w-4 h-4" />
                   Lab & Organization
                 </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   {billData.labId?.labName && (
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
@@ -492,13 +736,13 @@ export default function PatientDetail() {
             {/* Referral Information */}
             {billData.billReferral && billData.billReferral !== 'SELF' && (
               <motion.div
-                className="bg-white rounded-xl p-4 shadow-sm"
+                className="bg-white rounded-xl p-3 shadow-sm"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <h3 className="text-sm font-semibold mb-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-2 rounded-lg">Referral Information</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <h3 className="text-xs font-semibold mb-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-2 rounded-lg">Referral Information</h3>
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="col-span-2 flex items-center gap-2">
                     <p className="text-xs text-gray-500">Referral Doctor:</p>
                     <p className="font-medium text-gray-800">{billData.billReferral}</p>
@@ -556,145 +800,197 @@ export default function PatientDetail() {
             )}
 
             {/* Report Status Details */}
-            {reportStatus.length > 0 && (
+            {(reportStatus.length > 0 || reportDetails.length > 0) && (
               <motion.div
-                className="bg-white rounded-xl p-4 shadow-sm"
+                className="bg-white rounded-xl p-3 shadow-sm"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-2 rounded-lg">
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-2 rounded-lg">
                   <HiDocument className="w-4 h-4" />
                   Report Status Details
                 </h3>
-                <div className="space-y-3">
-                  {reportDetails.map((rd: any, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm text-gray-800">{rd['Test Name'] || 'N/A'}</h4>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Report ID: {rd['Report Id'] || rd.reportID?.testID || 'N/A'} | 
-                            Lab Report ID: {rd.labReportId || 'N/A'}
-                          </p>
-                        </div>
-                        <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
-                          {rd.billPaymentStatus === 1 ? 'Paid' : 'Unpaid'}
-                        </span>
-                      </div>
+                {reportDetails.length > 0 ? (
+                  <div className="space-y-2">
+                    {reportDetails.map((rd: any, index: number) => {
+                      // Find the parent reportStatus for this reportDetail
+                      const parentStatus = reportStatus.find((rs: any) => 
+                        rs.reportDetails?.some((rpd: any) => rpd === rd || rpd['Report Id'] === rd['Report Id'])
+                      );
                       
-                      <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-2">
-                        {rd['Sample Date'] && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Sample Date:</span>
-                            <span>{formatDate(rd['Sample Date'])}</span>
-                          </div>
-                        )}
-                        {rd['Accession Date'] && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Accession Date:</span>
-                            <span>{formatDate(rd['Accession Date'])}</span>
-                          </div>
-                        )}
-                        {rd['Report Date'] && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Report Date:</span>
-                            <span>{formatDate(rd['Report Date'])}</span>
-                          </div>
-                        )}
-                        {rd['Approval Date'] && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Approval Date:</span>
-                            <span>{formatDate(rd['Approval Date'])}</span>
-                          </div>
-                        )}
-                        {rd.sampleID && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Sample ID:</span>
-                            <span>{rd.sampleID}</span>
-                          </div>
-                        )}
-                        {rd.billPaymentMode && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">Payment Mode:</span>
-                            <span>{rd.billPaymentMode}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Signing Doctor */}
-                      {rd['Signing Doctor'] && Array.isArray(rd['Signing Doctor']) && rd['Signing Doctor'].length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <p className="text-xs font-medium text-gray-600 mb-1">Signing Doctor:</p>
-                          {rd['Signing Doctor'].map((doc: any, docIndex: number) => {
-                            const doctorName = Object.values(doc)[0] as string;
-                            return (
-                              <p key={docIndex} className="text-xs text-gray-700">
-                                {doctorName || 'N/A'}
+                      return (
+                        <div key={index} className="border border-gray-200 rounded-lg p-2">
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm text-gray-800">
+                                {rd['Test Name'] || rd.testName || 'N/A'}
+                              </h4>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {rd['Report Id'] || rd.reportID?.testID || rd.reportIdNumber ? (
+                                  <>Report ID: {rd['Report Id'] || rd.reportID?.testID || rd.reportIdNumber}</>
+                                ) : null}
+                                {rd.labReportId && (
+                                  <> | Lab Report ID: {rd.labReportId}</>
+                                )}
+                                {rd.testCode && (
+                                  <> | Test Code: {rd.testCode}</>
+                                )}
                               </p>
-                            );
-                          })}
-                </div>
-              )}
-
-                      {/* Report Format and Values */}
-                      {rd.reportFormatAndValues && Array.isArray(rd.reportFormatAndValues) && rd.reportFormatAndValues.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <p className="text-xs font-medium text-gray-600 mb-1">Test Values:</p>
-                          <div className="space-y-1">
-                            {rd.reportFormatAndValues.slice(0, 5).map((rfv: any, rfvIndex: number) => {
-                              if (typeof rfv.reportFormat === 'object' && !Array.isArray(rfv.reportFormat)) {
-                                return (
-                                  <div key={rfvIndex} className="flex justify-between text-xs">
-                                    <span className="text-gray-600">{rfv.reportFormat.testName || 'N/A'}:</span>
-                                    <span className={`font-medium ${rfv.highlight ? 'text-red-600' : 'text-gray-800'}`}>
-                                      {rfv.value || 'N/A'} {rfv.reportFormat.testUnit || ''}
-                                    </span>
-                                  </div>
-                                );
-                              }
-                              return <div key={rfvIndex}></div>;
-                            })}
+                              {(parentStatus?.status || rd.status) && (
+                                <p className="text-xs text-gray-600 mt-1">
+                                  Status: <span className="font-medium">{parentStatus?.status || rd.status}</span>
+                                </p>
+                              )}
+                            </div>
+                            {(rd.billPaymentStatus !== undefined || rd.billPaymentStatus !== null) && (
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                rd.billPaymentStatus === 1 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {rd.billPaymentStatus === 1 ? 'Paid' : 'Unpaid'}
+                              </span>
+                            )}
                           </div>
-                </div>
-              )}
-                    </div>
-                  ))}
-                </div>
+                          
+                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-2">
+                            {(rd['Sample Date'] || rd.sampleDate) && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Sample Date:</span>
+                                <span>{formatDate(rd['Sample Date'] || rd.sampleDate)}</span>
+                              </div>
+                            )}
+                            {(rd['Accession Date'] || rd.accessionDate) && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Accession Date:</span>
+                                <span>{formatDate(rd['Accession Date'] || rd.accessionDate)}</span>
+                              </div>
+                            )}
+                            {(rd['Report Date'] || rd.reportDate) && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Report Date:</span>
+                                <span>{formatDate(rd['Report Date'] || rd.reportDate)}</span>
+                              </div>
+                            )}
+                            {(rd['Approval Date'] || rd.approvalDate) && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Approval Date:</span>
+                                <span>{formatDate(rd['Approval Date'] || rd.approvalDate)}</span>
+                              </div>
+                            )}
+                            {(rd.sampleID || rd.sampleId) && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Sample ID:</span>
+                                <span>{rd.sampleID || rd.sampleId}</span>
+                              </div>
+                            )}
+                            {rd.billPaymentMode && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Payment Mode:</span>
+                                <span>{rd.billPaymentMode}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Signing Doctor */}
+                          {(rd['Signing Doctor'] || rd.signingDoctor) && 
+                           Array.isArray(rd['Signing Doctor'] || rd.signingDoctor) && 
+                           (rd['Signing Doctor'] || rd.signingDoctor).length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Signing Doctor:</p>
+                              {(rd['Signing Doctor'] || rd.signingDoctor).map((doc: any, docIndex: number) => {
+                                const doctorName = typeof doc === 'string' 
+                                  ? doc 
+                                  : (Object.values(doc)[0] as string);
+                                return (
+                                  <p key={docIndex} className="text-xs text-gray-700">
+                                    {doctorName || 'N/A'}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Report Format and Values */}
+                          {rd.reportFormatAndValues && Array.isArray(rd.reportFormatAndValues) && rd.reportFormatAndValues.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Test Values:</p>
+                              <div className="space-y-1">
+                                {rd.reportFormatAndValues.slice(0, 5).map((rfv: any, rfvIndex: number) => {
+                                  if (typeof rfv.reportFormat === 'object' && !Array.isArray(rfv.reportFormat)) {
+                                    return (
+                                      <div key={rfvIndex} className="flex justify-between text-xs">
+                                        <span className="text-gray-600">{rfv.reportFormat.testName || 'N/A'}:</span>
+                                        <span className={`font-medium ${rfv.highlight ? 'text-red-600' : 'text-gray-800'}`}>
+                                          {rfv.value || 'N/A'} {rfv.reportFormat.testUnit || ''}
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  return <div key={rfvIndex}></div>;
+                                })}
+                              </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    No report details available
+                  </div>
+                )}
               </motion.div>
             )}
+                </>
+              )}
 
-            {/* Additional Information */}
-            {(billData.orderNumber || billData.billComments || billData.departmentName || billData.currency || billData.ssnNumber || billData.passportNumber || billData.ethnicity || billData.race || billData.alternateContact || billData.alternateEmail || billData['Patient Alternate Contact']) && (
+              {/* Tab 3: Additional Details */}
+              {activeInfoTab === 2 && (
+                <>
+                  {/* Additional Information */}
+            {(billData.currency || billData.ssnNumber || billData.passportNumber || billData.ethnicity || billData.race || billData.alternateContact || billData.alternateEmail || billData['Patient Alternate Contact'] || billData.patient_type || billData.patient_email || billData.docId || billData['Billed Username'] || billData['Billed UserId']) && (
               <motion.div
-                className="bg-white rounded-xl p-4 shadow-sm"
+                className="bg-white rounded-xl p-3 shadow-sm"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 bg-gradient-to-r from-slate-500 to-gray-600 text-white px-3 py-2 rounded-lg">
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-2 bg-gradient-to-r from-slate-500 to-gray-600 text-white px-3 py-2 rounded-lg">
                   <HiClipboardList className="w-4 h-4" />
                   Additional Information
                 </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {billData.orderNumber && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {billData.currency && (
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-gray-500">Order Number:</p>
-                      <p className="font-medium text-gray-800">{billData.orderNumber}</p>
+                      <p className="text-xs text-gray-500">Currency:</p>
+                      <p className="font-medium text-gray-800">{billData.currency}</p>
                     </div>
                   )}
-                  {billData.departmentName && (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-500">Department:</p>
-                        <p className="font-medium text-gray-800">{billData.departmentName}</p>
-                      </div>
-                      {billData.currency && (
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-gray-500">Currency:</p>
-                          <p className="font-medium text-gray-800">{billData.currency}</p>
-                        </div>
-                      )}
+                  {billData.patient_type && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">Patient Type:</p>
+                      <p className="font-medium text-gray-800">{billData.patient_type}</p>
+                    </div>
+                  )}
+                  {billData.patient_email && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">Email:</p>
+                      <p className="font-medium text-gray-800">{billData.patient_email}</p>
+                    </div>
+                  )}
+                  {(billData.alternateContact || billData['Patient Alternate Contact']) && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">Alternate Contact:</p>
+                      <p className="font-medium text-gray-800">{billData.alternateContact || billData['Patient Alternate Contact']}</p>
+                    </div>
+                  )}
+                  {billData.alternateEmail && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">Alternate Email:</p>
+                      <p className="font-medium text-gray-800">{billData.alternateEmail}</p>
                     </div>
                   )}
                   {billData.ssnNumber && (
@@ -721,27 +1017,30 @@ export default function PatientDetail() {
                       <p className="font-medium text-gray-800">{billData.race}</p>
                     </div>
                   )}
-                  {(billData.alternateContact || billData['Patient Alternate Contact']) && (
+                  {billData.docId && (
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-gray-500">Alternate Contact:</p>
-                      <p className="font-medium text-gray-800">{billData.alternateContact || billData['Patient Alternate Contact']}</p>
+                      <p className="text-xs text-gray-500">Doctor ID:</p>
+                      <p className="font-medium text-gray-800">{billData.docId}</p>
                     </div>
                   )}
-                  {billData.alternateEmail && (
+                  {billData['Billed Username'] && (
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-gray-500">Alternate Email:</p>
-                      <p className="font-medium text-gray-800">{billData.alternateEmail}</p>
-                    </div>
-                  )}
-                  {billData.billComments && (
-                    <div className="col-span-2 flex items-center gap-2">
-                      <p className="text-xs text-gray-500">Comments:</p>
-                      <p className="font-medium text-gray-800">{billData.billComments}</p>
+                      <p className="text-xs text-gray-500">Billed By:</p>
+                      <p className="font-medium text-gray-800">{billData['Billed Username']}</p>
+                </div>
+              )}
+                  {billData['Billed UserId'] && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">Billed User ID:</p>
+                      <p className="font-medium text-gray-800">{billData['Billed UserId']}</p>
                 </div>
               )}
             </div>
           </motion.div>
             )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
