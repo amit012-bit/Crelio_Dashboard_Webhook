@@ -6,7 +6,7 @@ export default function Navbar() {
       <div className="flex items-center justify-between">
         {/* Left side - Logo and Search */}
         <div className="flex items-center space-x-4 flex-1">
-          <h2 className="text-xl font-bold text-gray-800">MedShell</h2>
+          {/* <h2 className="text-xl font-bold text-gray-800">MedShell</h2> */}
           <div className="hidden md:flex flex-1 max-w-md">
             <div className="relative w-full">
               <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
