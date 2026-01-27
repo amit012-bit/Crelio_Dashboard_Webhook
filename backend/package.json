@@ -10,7 +10,8 @@
     "test": "jest",
     "seed": "node scripts/seedData.js",
     "seed:departments": "node scripts/seedDepartmentAndTestInfo.js",
-    "consolidate:patients": "node scripts/consolidatePatientData.js"
+    "consolidate:patients": "node scripts/consolidatePatientData.js",
+    "check:ct-mri": "node scripts/checkCTScanMRI.js"
   },
   "keywords": [
     "crelio",

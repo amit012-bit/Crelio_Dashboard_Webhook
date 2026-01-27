@@ -144,6 +144,29 @@ export default function PatientDetail() {
     return initials.substring(0, 3) || `T${index + 1}`;
   };
 
+  // Helper to determine imaging type from test name
+  const getImagingType = (testName: string | null | undefined): string | null => {
+    if (!testName) return null;
+    const normalized = testName.toLowerCase().replace(/[^\w\s]/g, ' ').trim();
+    
+    // MRI
+    if (/\b(mri|magnetic resonance)\b/.test(normalized)) return 'MRI';
+    // CT Scan
+    if (/\b(ct|computed tomography|hrct)\b/.test(normalized)) return 'CT Scan';
+    // Ultrasound
+    if (/\b(ultrasound|usg|sonography|doppler)\b/.test(normalized)) return 'Ultrasound';
+    // X-Ray
+    if (/\b(x ray|x-ray|xray|radiography)\b/.test(normalized)) return 'X-Ray';
+    // Echocardiography
+    if (/\b(echo|echocardiography)\b/.test(normalized)) return 'Echocardiography';
+    // Mammography
+    if (/\b(mammography|mammogram)\b/.test(normalized)) return 'Mammography';
+    // Endoscopy
+    if (/\b(endoscopy|colonoscopy|bronchoscopy)\b/.test(normalized)) return 'Endoscopy';
+    
+    return null;
+  };
+
   // Helper function to get timeline stages for a test
   const getTimelineStages = (test: any, testReport: any, testStatus: any, reportDetail: any) => {
     const stages = [
@@ -318,10 +341,21 @@ export default function PatientDetail() {
                     <div className="border border-gray-200 rounded-lg p-2">
                     {/* Test Name */}
                       <div className="mb-2">
-                        <h4 className="font-semibold text-gray-800 text-sm mb-1">{test.testname || test.TestDetails?.TestName || 'N/A'}</h4>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-gray-800 text-sm mb-1">{test.testname || test.TestDetails?.TestName || 'N/A'}</h4>
+                          {(getImagingType(test.testname || test.TestDetails?.TestName) || test.TestDetails?.category || test.TestDetails?.Department) && (
+                            <span className="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full font-medium uppercase">
+                              {getImagingType(test.testname || test.TestDetails?.TestName) || test.TestDetails?.category || test.TestDetails?.Department}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">
                           {test.TestDetails?.TestCode || test.testCode || 'N/A'} • {formatCurrency(test.testAmount)}
                         </p>
+                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
+                          <span className="font-medium">Imaging Type:</span>
+                          <span>{getImagingType(test.testname || test.TestDetails?.TestName) || ''}</span>
+                        </div>
                     </div>
 
                       {/* Progress Timeline Pipeline */}
@@ -456,9 +490,16 @@ export default function PatientDetail() {
                 <div className="space-y-2">
                   {labReportDetails.map((report: any, index: number) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-2">
-                      <h4 className="font-medium text-xs text-gray-800 mb-1">
-                        {report.reportID?.testName || 'N/A'}
-                      </h4>
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-medium text-xs text-gray-800">
+                          {report.reportID?.testName || 'N/A'}
+                        </h4>
+                        {(getImagingType(report.reportID?.testName) || report.reportID?.['Test Type'] || report.reportID?.departmentId?.name) && (
+                          <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-medium uppercase">
+                            {getImagingType(report.reportID?.testName) || report.reportID?.['Test Type'] || report.reportID?.departmentId?.name}
+                          </span>
+                        )}
+                      </div>
                       <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
                         {report.reportID?.testCode && (
                           <div className="flex items-center gap-1">
@@ -490,6 +531,10 @@ export default function PatientDetail() {
                             <span>{report.reportID.sampleId.name || report.reportID.sampleId.type || 'N/A'}</span>
                           </div>
                         )}
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Imaging Type:</span>
+                          <span>{getImagingType(report.reportID?.testName) || ''}</span>
+                        </div>
                         {report.collectedSampleId?.accessionNo && (
                           <div className="flex items-center gap-1">
                             <span className="font-medium">Accession No:</span>
@@ -823,9 +868,16 @@ export default function PatientDetail() {
                         <div key={index} className="border border-gray-200 rounded-lg p-2">
                           <div className="flex items-start justify-between mb-1">
                             <div className="flex-1">
-                              <h4 className="font-medium text-sm text-gray-800">
-                                {rd['Test Name'] || rd.testName || 'N/A'}
-                              </h4>
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-sm text-gray-800">
+                                  {rd['Test Name'] || rd.testName || 'N/A'}
+                                </h4>
+                                {(getImagingType(rd['Test Name'] || rd.testName) || rd['Test Type'] || rd.testType) && (
+                                  <span className="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-medium uppercase">
+                                    {getImagingType(rd['Test Name'] || rd.testName) || rd['Test Type'] || rd.testType}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-500 mt-1">
                                 {rd['Report Id'] || rd.reportID?.testID || rd.reportIdNumber ? (
                                   <>Report ID: {rd['Report Id'] || rd.reportID?.testID || rd.reportIdNumber}</>
@@ -885,6 +937,10 @@ export default function PatientDetail() {
                                 <span>{rd.sampleID || rd.sampleId}</span>
                               </div>
                             )}
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Imaging Type:</span>
+                              <span>{getImagingType(rd['Test Name'] || rd.testName) || ''}</span>
+                            </div>
                             {rd.billPaymentMode && (
                               <div className="flex items-center gap-1">
                                 <span className="font-medium">Payment Mode:</span>

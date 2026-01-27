@@ -31,6 +31,12 @@ const testInfoSchema = new mongoose.Schema(
       required: true,
       index: true, // Index for faster queries on foreign key
     },
+    ImagingProcedureID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ImagingProcedure",
+      required: false, // Not all tests are imaging procedures
+      index: true,
+    },
   },
   {
     timestamps: true, // Automatically add createdAt and updatedAt fields
